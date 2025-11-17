@@ -5,6 +5,11 @@ func ParseInt(something string) int {
 	num := 0
 	i := 0
 
+	if len(something) == 0 {
+		// not sure if good idea
+		panic("no way you want to parse an empty string")
+	}
+
 	if len(something) > 0 && something[0] == '-' {
 		negative = true
 		i = 1
