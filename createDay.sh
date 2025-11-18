@@ -48,26 +48,31 @@ package main
 import (
 	"io"
 	"log"
+
+	"github.com/bozdoz/advent-of-code-2025/utils"
 )
 
 func init() {
 	log.SetOutput(io.Discard)
 }
 
-func partOne(data int) (ans int) {
-	return
+type d = []string
+
+var day = utils.NewDay[d]()
+
+func partOne(data d) (ans any) {
+	return 0
 }
 
-func partTwo(data int) (ans int) {
-	return
+func partTwo(data d) (ans any) {
+	return 0
 }
-
-//
-// BOILERPLATE BELOW
-//
 
 func main() {
-	
+	data := day.Read("./input.txt")
+
+	day.Run(partOne, data, 1)
+	day.Run(partTwo, data, 2)
 }
 
 EOF
@@ -93,10 +98,22 @@ var answers = map[int]int{
 	2: 0,
 }
 
+var data = day.Read("./example.txt")
+
 func TestExampleOne(t *testing.T) {
 	want := answers[1]
 
 	got := partOne(data)
+
+	if got != want {
+		t.Errorf("Answer should be %v, but got %v", want, got)
+	}
+}
+
+func TestExampleTwo(t *testing.T) {
+	want := answers[2]
+
+	got := partTwo(data)
 
 	if got != want {
 		t.Errorf("Answer should be %v, but got %v", want, got)
