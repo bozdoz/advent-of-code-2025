@@ -1,3 +1,6 @@
 .session.sh
 coverage.out
 .DS_Store
+
+# don't store inputs
+*/input.txt

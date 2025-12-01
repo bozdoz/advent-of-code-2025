@@ -52,13 +52,7 @@ import (
 	"github.com/bozdoz/advent-of-code-2025/utils"
 )
 
-func init() {
-	log.SetOutput(io.Discard)
-}
-
 type d = []string
-
-var day = utils.NewDay[d]()
 
 func partOne(data d) (ans any) {
 	return 0
@@ -68,11 +62,21 @@ func partTwo(data d) (ans any) {
 	return 0
 }
 
-func main() {
-	data := day.Read("./input.txt")
+//
+// BOILERPLATE
+//
 
-	day.Run(partOne, data, 1)
-	day.Run(partTwo, data, 2)
+func init() {
+	log.SetOutput(io.Discard)
+}
+
+var day = utils.NewDay[d]()
+
+func main() {
+	day.Read("./input.txt")
+
+	day.Run(partOne)
+	day.Run(partTwo)
 }
 
 EOF
@@ -89,7 +93,7 @@ import (
 
 func init() {
 	log.SetOutput(os.Stdout)
-	log.SetFlags(log.Llongfile)
+	log.SetFlags(log.Lshortfile)
 }
 
 // fill in the answers for each part (as they come)
