@@ -38,6 +38,12 @@ func NewDay[T any]() *day[T] {
 	return day
 }
 
+// adds some custom reader
+func (day *day[T]) WithReader(fun func(string) T) *day[T] {
+	day.reader = fun
+	return day
+}
+
 // read the data according to whatever parser we set
 func (day *day[T]) Read(filename string) (out T) {
 	day.data = day.reader(filename)

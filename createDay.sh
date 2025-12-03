@@ -41,6 +41,8 @@ touch example.txt
 # get input from API endpoint
 curl "https://adventofcode.com/${YEAR}/day/${STRIPPED}/input" --compressed -H "${COOKIE}" > ./input.txt
 
+echo "GET READY FOR https://adventofcode.com/${YEAR}/day/${STRIPPED}"
+
 # create main go file
 cat > $NEW_DAY_NAME.go <<EOF
 package main
