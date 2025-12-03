@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -168,6 +170,29 @@ func BenchmarkString(b *testing.B) {
 		b.Run(fmt.Sprintf("%v", s), func(b *testing.B) {
 			for b.Loop() {
 				_ = hasRepeatingString(s)
+			}
+		})
+	}
+}
+
+func isAtLeastTwice(id int) bool {
+	identifier := strconv.FormatInt(int64(id), 10)
+	if len(identifier) <= 1 {
+		return false
+	}
+
+	doubled := identifier + identifier
+	doubled = doubled[1 : len(doubled)-1]
+
+	return strings.Contains(doubled, identifier)
+}
+
+func BenchmarkContains(b *testing.B) {
+	log.SetOutput(io.Discard)
+	for _, s := range benchTests {
+		b.Run(fmt.Sprintf("%v", s), func(b *testing.B) {
+			for b.Loop() {
+				_ = isAtLeastTwice(s)
 			}
 		})
 	}

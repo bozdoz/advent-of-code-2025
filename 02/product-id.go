@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/bozdoz/advent-of-code-2025/utils"
@@ -144,7 +145,10 @@ func hasRepeatingRegex(val int) bool {
 }
 
 func hasRepeatingString(val int) bool {
-	str := fmt.Sprintf("%d", val)
+	// Sprintf slower
+	// str := fmt.Sprintf("%d", val)
+
+	str := strconv.FormatInt(int64(val), 10)
 	digits := len(str)
 
 outer:

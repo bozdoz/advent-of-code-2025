@@ -4,7 +4,8 @@
 
 **Time: 2 hrs**
 
-**Run Time: 100ms**
+~~**Run Time: 100ms**~~
+**Run Time: 53ms**
 
 Added a `WithReader` method for the Day utility:
 
