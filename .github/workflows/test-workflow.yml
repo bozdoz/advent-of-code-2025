@@ -16,6 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: go test ./... -bench=.
+      - run: go test ./... -run Bench -bench .
       - run: go test ./... -cover -coverprofile ./coverage.out
       - run: go tool cover -func ./coverage.out | tail -1

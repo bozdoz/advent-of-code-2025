@@ -1,3 +1,58 @@
+### Day 3
+
+**Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
+
+**Time: 1 hrs**
+
+**Run Time: 345µs**
+
+This seemed very straight forward with a couple interesting challenges.  The first part was very simple to just iterate once and compare first and second max values.  The second part initially made me start backwards, with all initial values on the right-most 12 digits.  Then I iterated backwards, moving the head, then the tail.  I realized quickly after that I should just always get the left-most highest number, and it made for a much simpler function:
+
+```go
+func (jolt *Joltage) LargestOptimized() int {
+	start := len(jolt.batteries) - 12
+	// start with right-most 12 digits as largest
+	indices := make([]int, 12)
+
+	for i := range 12 {
+		indices[i] = start + i
+	}
+
+  // don't need the *copied* value, because we always want the current value
+	for i := range indices {
+		// don't iterate to index -1
+		until := -1
+		if i > 0 {
+			// don't go beyond previous node
+			until = indices[i-1]
+		}
+		for j := indices[i] - 1; j > until; j-- {
+			if jolt.batteries[j] >= jolt.batteries[indices[i]] {
+				indices[i] = j
+			}
+		}
+	}
+
+	out := 0
+
+	for i := range 12 {
+		out *= 10
+		out += jolt.batteries[indices[i]]
+	}
+
+	return out
+}
+```
+
+The only awkward part was keeping track of `jolt.batteries[indices[i]]`.  I benchmarked the two approaches, and found the "optimized" one ran 5x as fast:
+
+```console
+BenchmarkLargestChain/987654321111111-10          4313073     261.5 ns/op
+BenchmarkLargestChain/811111111111119-10          4479896     268.5 ns/op
+BenchmarkLargestOptimized/987654321111111-10   22342346      52.80 ns/op
+BenchmarkLargestOptimized/811111111111119-10   21657750      54.55 ns/op
+```
+
 ### Day 2
 
 **Difficulty: 2/10 ★★☆☆☆☆☆☆☆☆**
