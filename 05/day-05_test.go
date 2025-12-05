@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"testing"
@@ -56,5 +57,24 @@ func TestExampleTwo(t *testing.T) {
 
 	if got != want {
 		t.Errorf("Answer should be %v, but got %v", want, got)
+	}
+}
+
+func BenchmarkSortRange(b *testing.B) {
+	log.SetOutput(io.Discard)
+	prod := NewProduct(data)
+	for b.Loop() {
+		prod.sortRanges()
+	}
+}
+
+func BenchmarkSortSlices(b *testing.B) {
+	log.SetOutput(io.Discard)
+	prod := NewProduct(data)
+	for b.Loop() {
+		// couldn't use these to reset the ranges
+		// b.StopTimer()
+		// b.StartTimer()
+		prod.sortSlices()
 	}
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/bozdoz/advent-of-code-2025/utils"
@@ -63,10 +65,17 @@ func (prod *Product) sortRanges() {
 	})
 }
 
+// 4x faster than the above
+func (prod *Product) sortSlices() {
+	slices.SortFunc(prod.freshRanges, func(i, j [2]int) int {
+		return cmp.Compare(i[0], j[0])
+	})
+}
+
 func (prod *Product) AllPossibleFresh() (count int) {
 	// merge ranges, then get diffs
 	// sort ranges first
-	prod.sortRanges()
+	prod.sortSlices()
 
 	// check in order
 	prev := prod.freshRanges[0]

@@ -12,6 +12,17 @@ Used `sort.Slice` to sort the ranges, before determining if they overlap (or are
 
 Super easy day.  I did add one extra test to verify that sort.Slice worked, but that was all.
 
+#### Update
+
+I changed the sorter from `sort.Slice` to the *new* Sequence-driven `slices.SortFunc`, which also uses `cmp.Compare`, and it is 4x quicker:
+
+```console
+cpu: Apple M4
+BenchmarkSortRange-10    26835813     43.86 ns/op
+BenchmarkSortSlices-10   149276900     7.891 ns/op
+```
+
+
 ### Day 4
 
 **Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
