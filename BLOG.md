@@ -1,3 +1,59 @@
+### Day 4
+
+**Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
+
+**Time: 30 min**
+
+**Run Time: 6.7ms**
+
+Didn't feel like I did anything today: not many tests, nothing new with utility scripts. Just the first grid puzzle of the year.
+
+I anticipated many pitfalls from previous years and created an ERROR cell:
+
+```go
+const (
+	EMPTY = '.'
+	PAPER = '@'
+	ERROR = '!' // my own definition
+)
+```
+
+And a getter (I ended up just needing the index, instead of querying by row and column):
+
+```go
+func (grid *Grid) getByIndex(index int) rune {
+	if index < 0 || index >= len(grid.cells) {
+		return ERROR
+	}
+	return grid.cells[index]
+}
+```
+
+That way I can ignore the edges of the grid.  The other issues was anticipating dealing with a 2d array for the grid:
+
+```go
+type Grid struct {
+	height, width int
+	cells         []rune
+}
+
+func (grid *Grid) forEachNeighbour(i int, fun func(char rune)) {
+	// ...
+	col := i % grid.width
+	// if column is 0 then we can't go left!
+	if col != 0 {
+		fun(grid.getByIndex(top - 1))
+		fun(grid.getByIndex(i - 1))
+		fun(grid.getByIndex(bottom - 1))
+	}
+	// ...
+}
+```
+
+I'm actually not sure if 2d array is faster than `map[int]map[int]rune`, but from memory of previous years it felt like it would be faster.
+
+The only other gotcha was remembering to remove the removable `PAPER` *after* the counting was done (so we didn't alter the counts).  But this was an obvious gotcha; one that `rust` would have never let me get away with in the first place 🦀
+
 ### Day 3
 
 **Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
