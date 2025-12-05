@@ -105,8 +105,17 @@ The only awkward part was keeping track of `jolt.batteries[indices[i]]`.  I benc
 ```console
 BenchmarkLargestChain/987654321111111-10          4313073     261.5 ns/op
 BenchmarkLargestChain/811111111111119-10          4479896     268.5 ns/op
-BenchmarkLargestOptimized/987654321111111-10   22342346      52.80 ns/op
-BenchmarkLargestOptimized/811111111111119-10   21657750      54.55 ns/op
+BenchmarkLargestOptimized/987654321111111-10     22342346      52.80 ns/op
+BenchmarkLargestOptimized/811111111111119-10     21657750      54.55 ns/op
+```
+
+OK, I updated it again to reduce the number of iterations to 1 instead of 3, and it halved the time:
+
+```console
+BenchmarkLargestChain/987654321111111-10          4415940     259.6 ns/op
+BenchmarkLargestChain/811111111111119-10          4405172     272.1 ns/op
+BenchmarkLargestOptimized/987654321111111-10     50055966      24.58 ns/op
+BenchmarkLargestOptimized/811111111111119-10     49564675      24.12 ns/op
 ```
 
 ### Day 2

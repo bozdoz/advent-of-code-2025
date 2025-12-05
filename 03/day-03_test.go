@@ -70,7 +70,7 @@ func TestLargestChain(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%v", test), func(t *testing.T) {
 			jolt := NewJoltage(test.input)
-			got := jolt.LargestChain()
+			got := jolt.largestChain()
 
 			if got != test.want {
 				t.Errorf("got: %v, want: %v", got, test.want)
@@ -94,7 +94,7 @@ func TestLargestOptimized(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%v", test), func(t *testing.T) {
 			jolt := NewJoltage(test.input)
-			got := jolt.LargestOptimized(12)
+			got := jolt.LargestOptimized()
 
 			if got != test.want {
 				t.Errorf("got: %v, want: %v", got, test.want)
@@ -124,7 +124,7 @@ func BenchmarkLargestChain(b *testing.B) {
 		jolt := NewJoltage(s)
 		b.Run(fmt.Sprintf("%v", s), func(b *testing.B) {
 			for b.Loop() {
-				jolt.LargestChain()
+				jolt.largestChain()
 			}
 		})
 	}
@@ -136,7 +136,7 @@ func BenchmarkLargestOptimized(b *testing.B) {
 		jolt := NewJoltage(s)
 		b.Run(fmt.Sprintf("%v", s), func(b *testing.B) {
 			for b.Loop() {
-				jolt.LargestOptimized(12)
+				jolt.LargestOptimized()
 			}
 		})
 	}

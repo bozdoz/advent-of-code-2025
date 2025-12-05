@@ -25,7 +25,7 @@ func partTwo(data d) (ans any) {
 
 	for _, input := range data {
 		jolt := NewJoltage(input)
-		sum += jolt.LargestOptimized(12)
+		sum += jolt.LargestOptimized()
 	}
 
 	return sum

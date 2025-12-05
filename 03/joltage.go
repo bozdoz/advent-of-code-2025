@@ -46,7 +46,8 @@ func (jolt *Joltage) Largest() int {
 	return first*10 + second
 }
 
-func (jolt *Joltage) LargestChain() int {
+// this was a bad idea; optimized below
+func (jolt *Joltage) largestChain() int {
 	start := len(jolt.batteries) - 12
 	// start with right-most 12 digits as largest
 	indices := make([]int, 12)
@@ -125,35 +126,29 @@ func (jolt *Joltage) LargestChain() int {
 	return out
 }
 
-func (jolt *Joltage) LargestOptimized(length int) int {
-	start := len(jolt.batteries) - length
+func (jolt *Joltage) LargestOptimized() (out int) {
+	start := len(jolt.batteries) - 12
 	// start with right-most 12 digits as largest
-	indices := make([]int, length)
+	indices := make([]int, 12)
 
-	for i := range length {
+	for i := range 12 {
+		// populate initial indices
 		indices[i] = start + i
-	}
 
-	for i := range indices {
 		// don't iterate to index -1
 		until := -1
 		if i > 0 {
 			// don't go beyond previous node
 			until = indices[i-1]
 		}
+
 		for j := indices[i] - 1; j > until; j-- {
 			if jolt.batteries[j] >= jolt.batteries[indices[i]] {
 				indices[i] = j
 			}
 		}
-	}
 
-	// recombine the indices
-	log.Println(indices)
-
-	out := 0
-
-	for i := range length {
+		// we never revisit the indices, so we can start generating the output
 		out *= 10
 		out += jolt.batteries[indices[i]]
 	}
