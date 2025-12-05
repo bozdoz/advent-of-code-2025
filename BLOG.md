@@ -1,3 +1,17 @@
+### Day 5
+
+**Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
+
+**Time: 30 min**
+
+**Run Time: 550µs**
+
+Using `fmt.Sscanf` to parse ints in this puzzle; I had first accidentally tried `fmt.Scanf`, which requires a reader.
+
+Used `sort.Slice` to sort the ranges, before determining if they overlap (or are enveloped).
+
+Super easy day.  I did add one extra test to verify that sort.Slice worked, but that was all.
+
 ### Day 4
 
 **Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
