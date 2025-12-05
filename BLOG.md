@@ -4,7 +4,60 @@
 
 **Time: 30 min**
 
-**Run Time: 6.7ms**
+~~**Run Time: 6.7ms**~~
+**Run Time: 3.3ms**
+
+#### Update
+
+I revisited the algorithm and realized I could use one of Go's *new* iterator sequences: https://pkg.go.dev/iter (since go 1.23)
+
+So I took the old code (dependency injection): 
+
+```go
+grid.forEachNeighbour(cell, func(char rune) {
+	if char == PAPER {
+		count++
+	}
+})
+```
+
+And did this instead:
+
+```go
+for char := range grid.eachNeighbour(cell) {
+	if char == PAPER {
+		count++
+		if count == 4 {
+			// don't keep counting the rest of the 8 neighbours
+			break
+		}
+	}
+}
+```
+
+Though the function is a bit more verbose with all the handling of `yield` results (checking for `break` I'm assuming):
+
+```go
+// try a sequence
+func (grid *Grid) eachNeighbour(i int) iter.Seq[rune] {
+	return func(yield func(rune) bool) {
+		// top
+		top := i - grid.width
+		if !yield(grid.getByIndex(top)) {
+			return
+		}
+
+		// bottom
+		bottom := i + grid.width
+		if !yield(grid.getByIndex(bottom)) {
+			return
+		}
+		// ...
+```
+
+But this halved my overall time, which is great!
+
+#### Original
 
 Didn't feel like I did anything today: not many tests, nothing new with utility scripts. Just the first grid puzzle of the year.
 

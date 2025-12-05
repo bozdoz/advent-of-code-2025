@@ -1,5 +1,7 @@
 package main
 
+import "iter"
+
 const (
 	EMPTY = '.'
 	PAPER = '@'
@@ -34,6 +36,50 @@ func (grid *Grid) getByIndex(index int) rune {
 		return ERROR
 	}
 	return grid.cells[index]
+}
+
+// try a sequence
+func (grid *Grid) eachNeighbour(i int) iter.Seq[rune] {
+	return func(yield func(rune) bool) {
+		// top
+		top := i - grid.width
+		if !yield(grid.getByIndex(top)) {
+			return
+		}
+
+		// bottom
+		bottom := i + grid.width
+		if !yield(grid.getByIndex(bottom)) {
+			return
+		}
+
+		// left-most top-down
+		col := i % grid.width
+		if col != 0 {
+			if !yield(grid.getByIndex(top - 1)) {
+				return
+			}
+			if !yield(grid.getByIndex(i - 1)) {
+				return
+			}
+			if !yield(grid.getByIndex(bottom - 1)) {
+				return
+			}
+		}
+
+		// right-most top-down
+		if col != grid.width-1 {
+			if !yield(grid.getByIndex(top + 1)) {
+				return
+			}
+			if !yield(grid.getByIndex(i + 1)) {
+				return
+			}
+			if !yield(grid.getByIndex(bottom + 1)) {
+				return
+			}
+		}
+	}
 }
 
 func (grid *Grid) forEachNeighbour(i int, fun func(char rune)) {
@@ -79,14 +125,18 @@ func (grid *Grid) CleanPaper() int {
 
 	for cell := range grid.height * grid.width {
 		// we only care about the paper ones
-		if grid.getByIndex(cell) == PAPER {
+		if grid.cells[cell] == PAPER {
 			count := 0
 
-			grid.forEachNeighbour(cell, func(char rune) {
+			for char := range grid.eachNeighbour(cell) {
 				if char == PAPER {
 					count++
+					if count == 4 {
+						// don't keep counting the rest of the 8 neighbours
+						break
+					}
 				}
-			})
+			}
 
 			// fewer than 4
 			if count < 4 {
