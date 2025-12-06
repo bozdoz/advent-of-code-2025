@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"slices"
 	"sort"
@@ -67,8 +66,14 @@ func (prod *Product) sortRanges() {
 
 // 4x faster than the above
 func (prod *Product) sortSlices() {
-	slices.SortFunc(prod.freshRanges, func(i, j [2]int) int {
-		return cmp.Compare(i[0], j[0])
+	slices.SortFunc(prod.freshRanges, func(x, y [2]int) int {
+		if x[0] < y[0] {
+			return -1
+		}
+		if x[0] > y[0] {
+			return +1
+		}
+		return 0
 	})
 }
 

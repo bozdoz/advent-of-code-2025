@@ -43,39 +43,42 @@ func (grid *Grid) eachNeighbour(i int) iter.Seq[rune] {
 	return func(yield func(rune) bool) {
 		// top
 		top := i - grid.width
-		if !yield(grid.getByIndex(top)) {
+		has_top := top >= 0
+
+		if has_top && !yield(grid.cells[top]) {
 			return
 		}
 
 		// bottom
 		bottom := i + grid.width
-		if !yield(grid.getByIndex(bottom)) {
+		has_bottom := bottom >= len(grid.cells)
+		if has_bottom && !yield(grid.cells[bottom]) {
 			return
 		}
 
 		// left-most top-down
 		col := i % grid.width
 		if col != 0 {
-			if !yield(grid.getByIndex(top - 1)) {
+			if has_top && !yield(grid.cells[top-1]) {
 				return
 			}
-			if !yield(grid.getByIndex(i - 1)) {
+			if !yield(grid.cells[i-1]) {
 				return
 			}
-			if !yield(grid.getByIndex(bottom - 1)) {
+			if has_bottom && !yield(grid.cells[bottom-1]) {
 				return
 			}
 		}
 
 		// right-most top-down
 		if col != grid.width-1 {
-			if !yield(grid.getByIndex(top + 1)) {
+			if has_top && !yield(grid.cells[top+1]) {
 				return
 			}
-			if !yield(grid.getByIndex(i + 1)) {
+			if !yield(grid.cells[i+1]) {
 				return
 			}
-			if !yield(grid.getByIndex(bottom + 1)) {
+			if has_bottom && !yield(grid.cells[bottom+1]) {
 				return
 			}
 		}

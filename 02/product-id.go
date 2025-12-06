@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"regexp"
 	"strconv"
@@ -76,8 +75,6 @@ func hasRepeating(val int) bool {
 		half++
 	}
 
-	log.Print("\n\n", "value: ", val, " Half: ", half, "\n\n")
-
 outer:
 	// ? first time doing range int
 	for i := range half {
@@ -86,8 +83,6 @@ outer:
 		compare := val / pow
 
 		size := true_half - i
-
-		log.Println("compare:", compare, "size:", size, "pow:", pow)
 
 		if size == 0 || digits%size != 0 {
 			// check if it can evenly appear in val
@@ -99,13 +94,10 @@ outer:
 
 		// new pow for getting each right-most chunk
 		pow = int(math.Pow10(size))
-		log.Println("REST", rest, num, "pow:", pow)
 
-		for j := range digits/size - 1 {
+		for range digits/size - 1 {
 			// get right-most chunk
 			next := rest % pow
-
-			log.Println("j:", j, compare, next, "rest:", rest)
 
 			if next != compare {
 				continue outer
