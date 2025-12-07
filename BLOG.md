@@ -1,3 +1,68 @@
+### Day 6
+
+**Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
+
+**Time: 30 min**
+
+**Run Time: 260µs**
+
+Another easy one.  This was just a data-parsing puzzle.  Nothing too advanced.
+
+I made two structs, one I regretted immediately.  I made some constants with a custom rune-type, which I later regretted.
+
+I heavily relied on `strings.Fields` which breaks a line up by space-separated values (I wasn't exactly sure if multiple spaces would work, but it did).
+
+So Part 1 was a breeze.
+
+Part 2 was just thinking of the input as a grid (thankfully there were empty spaces in the data):
+
+```console
+123 328  51 64.
+ 45 64  387 23. 
+  6 98  215 314
+*   +   *   +  
+```
+
+Otherwise, I would have had a harder time analyzing that right-most column.
+
+But yeah, this grid-cell traversing was simple:
+
+```go
+func NewGridCollection(data []string) *Collection {
+	height := len(data)
+	width := len(data[0])
+
+	// start top-down, right to left
+	for c := width - 1; c >= 0; c-- {
+		num := 0
+		for r := range height {
+			cell := data[r][c]
+```
+
+I think I tweaked the logic once or twice and got the right answer.
+
+The annoying part of making a custom rune-type was checks like this where I couldn't even use it: 
+
+```go
+// operation row
+if cell == '+' || cell == '*' {
+	// problem is finished
+	problem.operation = Operation(cell)
+```
+
+Instead I had to check the rune, and then convert to `Operation`, which seems completely needless.
+
+I copied over a part of the `ParseInt` function, because I knew the cell was going to contain a single digit:
+
+```go
+if cell != ' ' {
+	// is number (simplified from utils.ParseInt)
+	num = num*10 + int(cell-'0')
+}
+```
+
+Which removes negative checks, and iterating a full string.  Maybe I should save that to a utility function, but I guess it's less characters already than any function name I could give it: `int(cell-'0')`
+
 ### Day 5
 
 **Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
