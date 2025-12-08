@@ -51,7 +51,7 @@ func (grid *Grid) eachNeighbour(i int) iter.Seq[rune] {
 
 		// bottom
 		bottom := i + grid.width
-		has_bottom := bottom >= len(grid.cells)
+		has_bottom := bottom < len(grid.cells)
 		if has_bottom && !yield(grid.cells[bottom]) {
 			return
 		}
