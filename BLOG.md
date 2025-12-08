@@ -1,3 +1,78 @@
+### Day 7
+
+**Difficulty: 5/10 ★★★★★☆☆☆☆☆**
+
+**Time: 2 hrs**
+
+**Run Time: 340µs**
+
+This was difficult to keep in my head, due to trying out DFS and BFS and also trying to do some kind of path traversing, while ignoring visited nodes.
+
+I put to pen and paper an algorithm for part 2, which worked just fine for the test data, but not for the actual data.  So I have no idea where I went wrong.  What I tried to do worked also for Part 1:
+
+1. I did a BFS, tracking all the seen Splitters
+2. Each state was either the start or a splitter, and tracked how many beams hit it, and whether any reach the end
+
+```go
+type Splitter struct {
+	beams         int // usually splits 1
+	beamsReachEnd int // out of 2, how many beams
+}
+// ... (in loop)
+reachesEnd := state.reachesEnd
+// skip seen
+if splitter, ok := splitters[state.position]; ok {
+	if reachesEnd {
+		splitter.beamsReachEnd++
+	} else {
+		// this splitter also sees beams from another splitter above
+		splitter.beams += splitters[state.prev].beams
+	}
+	continue
+}
+// ...
+```
+
+3. So it carried its parents beams, without having to continue to produce next states for the loop
+4. I iterated the returned seen Splitter map, and multiplied number of beams by number of beams that reached the end
+
+```go
+//
+// no idea why this didn't work on my input, but worked on test data
+//	
+splitters := grid.Travel()
+
+sum := 0
+
+for _, splitter := range splitters {
+	// we only count the beams that exit the grid
+	if splitter.beamsReachEnd > 0 {
+		sum += splitter.beams * splitter.beamsReachEnd
+	}
+}
+```
+
+Again, this worked just fine for test data.
+
+I asked copilot to figure out some edge case I'm missing, and it produced a bunch of garbage.
+
+Then I saw [a visualization on Reddit](https://www.reddit.com/r/adventofcode/comments/1pgnmou/2025_day_7_lets_visualize/) which I knew would work, so I made some code for that.  This code worked in under 30µs, which is incredible.  Though I have no idea how to use it to compare and figure out where I went wrong with my algorithm.  For my real input, the two methods differed by hundreds of thousands: the test data, identical 🫠.
+
+I'm really liking 2d arrays for grids now.  Up and down is just subtracting or adding `grid.width`, and conversion to columns is just `index%grid.width`; also, checking out-of-grid is a combination of checking the column and whether index is < 0 or > height*width.  I did make some debugging functions while I worked though:
+
+```go
+func (grid *Grid) DebugToRC(i int) [2]int {
+	r := i / grid.width
+	c := i % grid.width
+
+	return [2]int{r, c}
+}
+
+func (grid *Grid) DebugFromRC(rc [2]int) int {
+	return rc[0]*grid.width + rc[1]
+}
+```
+
 ### Day 6
 
 **Difficulty: 1/10 ★☆☆☆☆☆☆☆☆☆**
