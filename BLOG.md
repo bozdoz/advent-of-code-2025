@@ -1,3 +1,97 @@
+### Day 8
+
+**Difficulty: 7/10 ★★★★★★★☆☆☆**
+
+**Time: 3 hrs**
+
+**Run Time: 100ms**
+
+TIL that `go test` != `go test .`, and I don't know why.  It looks like `go test` preserves the stdout, and `go test` squelches it so long as tests pass.  This seems more useful to me for debugging.
+
+I had a lot going on today with node id's, which didn't turn out terribly.  These are all the same node id's as `int`:
+
+```go
+a, b     int // index
+
+adjacent []int
+
+nodes    map[int]*Node
+```
+
+Parsing was pretty easy.  I copied some of my 3d distance function from 2021:
+
+```go
+func (p1 *Point) Distance(p2 Point) float64 {
+	x := p2.x - p1.x
+	y := p2.y - p1.y
+	z := p2.z - p1.z
+
+	return math.Sqrt(float64(x*x + y*y + z*z))
+}
+```
+
+I'm surprised that the scripts run as fast as they do.  I expected all the looping and sorting I was doing would be costly.
+
+Creating all the nodes and edges was straight forward:
+
+```go
+for i, a := range junction.points {
+	for j := i + 1; j < len(junction.points); j++ {
+		dist := a.Distance(junction.points[j])
+```
+
+`j` starts at `i+1` to make sure each node sees every other node once.
+
+Then it's sorted, ascending.
+
+Then I connect all the adjacent nodes in order of distance, which is very short, and very ugly:
+
+```go
+func (junction *Junction) ConnectNodes(count int) {
+	for _, pair := range junction.distances[:count] {
+		// ugly
+		junction.nodes[pair.a].adjacent = append(junction.nodes[pair.a].adjacent, pair.b)
+		junction.nodes[pair.b].adjacent = append(junction.nodes[pair.b].adjacent, pair.a)
+	}
+}
+```
+
+Then I did a silly thing, and I made another `Sequence` to iterate.
+
+So I iterated the distances again, that I sorted, which gave me edges, then I did a `range` to do a BFS over connected nodes.
+
+```go
+// maybe not the best time for me to be throwing myself
+// into another sequence
+func (junction *Junction) eachConnected(start int, visited *map[int]struct{}) iter.Seq[int] {
+	queue := append([]int{}, junction.nodes[start].adjacent...)
+
+	return func(yield func(int) bool) {
+		for len(queue) > 0 {
+			connectedId := shift(&queue)
+
+			if _, found := (*visited)[connectedId]; !found {
+				// add to visited
+				(*visited)[connectedId] = struct{}{}
+				// add next adjacent
+				queue = append(queue, junction.nodes[connectedId].adjacent...)
+				// check if statement, though I'm not sure we'll ever break
+				if !yield(connectedId) {
+					return
+				}
+			}
+		}
+	}
+}
+```
+
+This shared a visited map with the caller, since we'd never run into a visited cell within the loop that was part of an alternate circuit.  
+
+Then it counts and sorts the counts to get the top 3.
+
+For Part 2, I just keep connecting until all are visited.  Realizing now I just have to iterate them until they're all visited.
+
+
 ### Day 7
 
 **Difficulty: 5/10 ★★★★★☆☆☆☆☆**
