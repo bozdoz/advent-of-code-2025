@@ -31,6 +31,8 @@ func NewDay[T any]() *day[T] {
 	switch any(day.__type__).(type) {
 	case []string:
 		day.reader = any(ReadAsLines).(func(string) T)
+	case []int:
+		day.reader = any(ReadCSVInt).(func(string) T)
 	default:
 		panic(fmt.Sprintf("need to implement a reader for type: %T", day.__type__))
 	}
