@@ -1,3 +1,29 @@
+### Day 11
+
+**Difficulty: 6/10 ★★★★★★☆☆☆☆**
+
+**Time: 2 hrs**
+
+**Run Time: 1.5s**
+
+DFS and needless goroutines!  Today I used `maps.Clone` against my wishes.
+
+### Day 10
+
+**Difficulty: 0/10 ☆☆☆☆☆☆☆☆☆☆**
+
+**Time: ~ hrs**
+
+**Run Time: ~**
+
+### Day 9
+
+**Difficulty: 0/10 ☆☆☆☆☆☆☆☆☆☆**
+
+**Time: ~ hrs**
+
+**Run Time: ~**
+
 ### Day 8
 
 **Difficulty: 7/10 ★★★★★★★☆☆☆**
