@@ -38,7 +38,7 @@ type State struct {
 	visited map[string]struct{}
 }
 
-func (rack *ServerRack) NumPathsConnecting(start, goal string, avoid map[string]struct{}) (count int) {
+func (rack *ServerRack) NumPathsConnecting(start, goal string) (count int) {
 	// start at "you", end at "out"?
 	queue := []State{
 		{
@@ -64,11 +64,6 @@ func (rack *ServerRack) NumPathsConnecting(start, goal string, avoid map[string]
 		// get next states
 		added := false
 		for _, next := range rack.servers[state.current] {
-			// check if avoided
-			if _, found := avoid[next]; found {
-				continue
-			}
-
 			// check if visited
 			if _, found := state.visited[next]; found {
 				continue

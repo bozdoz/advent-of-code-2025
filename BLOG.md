@@ -4,9 +4,11 @@
 
 **Time: 2 hrs**
 
-**Run Time: 1.5s**
+**Run Time: ~1.5s~ 1.4s**
 
 DFS and needless goroutines!  Today I used `maps.Clone` against my wishes.
+
+Shaved another 0.1s by removing the `avoid` map idea.
 
 ### Day 10
 

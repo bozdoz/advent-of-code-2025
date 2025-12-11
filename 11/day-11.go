@@ -11,10 +11,8 @@ type d = []string
 
 func partOne(data d) (ans any) {
 	rack := NewServerRack(data)
-	// avoid nothing
-	avoid := map[string]struct{}{}
 
-	return rack.NumPathsConnecting("you", "out", avoid)
+	return rack.NumPathsConnecting("you", "out")
 }
 
 func partTwo(data d) (ans any) {
@@ -28,27 +26,13 @@ func partTwo(data d) (ans any) {
 	// each segment avoids the other parts
 	segments := []struct {
 		start, goal string
-		avoid       map[string]struct{}
 	}{
-		{"svr", "fft", map[string]struct{}{
-			// avoid the other two
-			"dac": {},
-			"out": {},
-		}},
-		{"fft", "dac", map[string]struct{}{
-			"svr": {},
-			"out": {},
-		}},
+		{"svr", "fft"},
+		{"fft", "dac"},
 		// returns 0
-		// {"dac", "fft", map[string]struct{}{
-		// 	"svr": {},
-		// 	"out": {},
-		// }},
+		// {"dac", "fft"},
 		// this is the fastest one (15131)
-		{"dac", "out", map[string]struct{}{
-			"svr": {},
-			"fft": {},
-		}},
+		{"dac", "out"},
 	}
 
 	// is it crazy to do goroutines? YES
@@ -62,7 +46,7 @@ func partTwo(data d) (ans any) {
 	// 1.5 seconds to run as go routines
 	for _, v := range segments {
 		go func() {
-			num := rack.NumPathsConnecting(v.start, v.goal, v.avoid)
+			num := rack.NumPathsConnecting(v.start, v.goal)
 			if num > 0 {
 				// fmt.Println("found", v, num)
 				response <- num
@@ -77,14 +61,13 @@ func partTwo(data d) (ans any) {
 	return first * second * third
 
 	// // NON-GOROUTINES here; it's JUST as fast as goroutines
-	// // product
-	// num := 1
+	// product := 1
 
 	// for _, v := range segments {
-	// 	num *= rack.NumPathsConnecting(v.start, v.goal, v.avoid)
+	// 	product *= rack.NumPathsConnecting(v.start, v.goal)
 	// }
 
-	// return num
+	// return product
 }
 
 //
