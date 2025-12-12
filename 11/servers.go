@@ -7,8 +7,46 @@ import (
 	"github.com/bozdoz/advent-of-code-2025/utils"
 )
 
+type Cache struct {
+	// from -> to -> count
+	data map[string]map[string]int
+	// I needlessly want to run goroutines
+	// mu sync.Mutex
+}
+
+func NewCache() Cache {
+	return Cache{
+		data: map[string]map[string]int{},
+	}
+}
+
+func (cache *Cache) Get(start, goal string) (int, bool) {
+	// for goroutines (takes 200µs longer)
+	// cache.mu.Lock()
+	// defer cache.mu.Unlock()
+	if a, found := cache.data[start]; found {
+		if b, found := a[goal]; found {
+			return b, true
+		}
+	}
+	return 0, false
+}
+
+func (cache *Cache) Set(start, goal string, val int) {
+	// cache.mu.Lock()
+	// defer cache.mu.Unlock()
+	if a, found := cache.data[start]; found {
+		a[goal] = val
+	} else {
+		cache.data[start] = map[string]int{
+			goal: val,
+		}
+	}
+}
+
 type ServerRack struct {
 	servers map[string][]string
+	cache   Cache
 }
 
 func NewServerRack(data []string) *ServerRack {
@@ -30,7 +68,7 @@ func NewServerRack(data []string) *ServerRack {
 		}
 	}
 
-	return &ServerRack{servers}
+	return &ServerRack{servers, NewCache()}
 }
 
 type State struct {
@@ -38,9 +76,10 @@ type State struct {
 	visited map[string]struct{}
 }
 
+// not used: slower than recursive below
 func (rack *ServerRack) NumPathsConnecting(start, goal string) (count int) {
 	// start at "you", end at "out"?
-	queue := []State{
+	stack := []State{
 		{
 			current: start,
 			visited: map[string]struct{}{
@@ -51,9 +90,9 @@ func (rack *ServerRack) NumPathsConnecting(start, goal string) (count int) {
 
 	pruned := map[string]struct{}{}
 
-	for len(queue) > 0 {
+	for len(stack) > 0 {
 		// DFS
-		state := utils.MustPop(&queue)
+		state := utils.MustPop(&stack)
 
 		// check if done
 		if state.current == goal {
@@ -84,7 +123,7 @@ func (rack *ServerRack) NumPathsConnecting(start, goal string) (count int) {
 			// add next
 			next_visited[next] = struct{}{}
 
-			queue = append(queue, State{
+			stack = append(stack, State{
 				next,
 				next_visited,
 			})
@@ -98,4 +137,26 @@ func (rack *ServerRack) NumPathsConnecting(start, goal string) (count int) {
 	}
 
 	return
+}
+
+// much faster than above
+func (rack *ServerRack) RecursivePathsConnecting(start, goal string) (count int) {
+	if start == goal {
+		return 1
+	}
+
+	// if cached
+	if val, found := rack.cache.Get(start, goal); found {
+		return val
+	}
+
+	sum := 0
+	for _, next := range rack.servers[start] {
+		sum += rack.RecursivePathsConnecting(next, goal)
+	}
+
+	// cache
+	rack.cache.Set(start, goal, sum)
+
+	return sum
 }

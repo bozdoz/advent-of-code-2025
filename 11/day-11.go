@@ -10,9 +10,7 @@ import (
 type d = []string
 
 func partOne(data d) (ans any) {
-	rack := NewServerRack(data)
-
-	return rack.NumPathsConnecting("you", "out")
+	return NewServerRack(data).NumPathsConnecting("you", "out")
 }
 
 func partTwo(data d) (ans any) {
@@ -35,39 +33,39 @@ func partTwo(data d) (ans any) {
 		{"dac", "out"},
 	}
 
-	// is it crazy to do goroutines? YES
-	var first, second, third int
-	// do goroutines to check segments in parallel:
-	response := make(chan int, 3)
-	// 240% CPU running all four segments
-	// 11 MB memory
-	// first two resolve quickly though
-	// does this blow up my machine?...looks at butterfly
-	// 1.5 seconds to run as go routines
-	for _, v := range segments {
-		go func() {
-			num := rack.NumPathsConnecting(v.start, v.goal)
-			if num > 0 {
-				// fmt.Println("found", v, num)
-				response <- num
-			}
-		}()
-	}
-
-	first = <-response
-	second = <-response
-	third = <-response
-
-	return first * second * third
-
-	// // NON-GOROUTINES here; it's JUST as fast as goroutines
-	// product := 1
-
+	// // is it crazy to do goroutines? YES
+	// var first, second, third int
+	// // do goroutines to check segments in parallel:
+	// response := make(chan int, 3)
+	// // 240% CPU running all four segments
+	// // 11 MB memory
+	// // first two resolve quickly though
+	// // does this blow up my machine?...looks at butterfly
+	// // 1.5 seconds to run as go routines
 	// for _, v := range segments {
-	// 	product *= rack.NumPathsConnecting(v.start, v.goal)
+	// 	go func() {
+	// 		num := rack.RecursivePathsConnecting(v.start, v.goal)
+	// 		if num > 0 {
+	// 			// fmt.Println("found", v, num)
+	// 			response <- num
+	// 		}
+	// 	}()
 	// }
 
-	// return product
+	// first = <-response
+	// second = <-response
+	// third = <-response
+
+	// return first * second * third
+
+	// NON-GOROUTINES here; it's now faster than goroutines
+	product := 1
+
+	for _, v := range segments {
+		product *= rack.RecursivePathsConnecting(v.start, v.goal)
+	}
+
+	return product
 }
 
 //

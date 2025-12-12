@@ -4,11 +4,128 @@
 
 **Time: 2 hrs**
 
-**Run Time: ~1.5s~ 1.4s**
+**Run Time: ~1.5s~ ~1.4s~ ~750µs~ 570µs**
 
 DFS and needless goroutines!  Today I used `maps.Clone` against my wishes.
 
 Shaved another 0.1s by removing the `avoid` map idea.
+
+I used the same function for both parts, and later added parameters for `start` and `goal`.
+
+The huge savings was when I started pruning:
+
+```go
+// get next states
+added := false
+for _, next := range rack.servers[state.current] {
+	// check if visited
+	if _, found := state.visited[next]; found {
+		continue
+	}
+
+	// check if pruned
+	if _, found := pruned[next]; found {
+		// fmt.Println("already pruned 2", next)
+		continue
+	}
+
+	added = true
+	// ...
+}
+
+if !added {
+	// prune!
+	pruned[state.current] = struct{}{}
+}
+```
+
+Without pruning, part 2 never finished.  I had also tried passing paths to ignore as parameters, as the second part is done in segments:
+
+```go
+// get all segment path possibilities
+
+// segments
+// srv -> [fft -> dac] -> out
+
+// each segment avoids the other parts
+segments := []struct {
+	start, goal string
+}{
+	{"svr", "fft"},
+	{"fft", "dac"},
+	// {"dac", "fft"}, // ! this returns 0
+	{"dac", "out"},
+}
+product := 1
+
+for _, v := range segments {
+	product *= rack.NumPathsConnecting(v.start, v.goal)
+}
+
+return product
+```
+
+Shaved a lot of time off, by just using a simple recursive function, and a shared cache, instead:
+
+```go
+func (rack *ServerRack) RecursivePathsConnecting(start, goal string) (count int) {
+	if start == goal {
+		return 1
+	}
+
+	// if cached
+	if val, found := rack.cache.Get(start, goal); found {
+		return val
+	}
+
+	sum := 0
+	for _, next := range rack.servers[start] {
+		sum += rack.RecursivePathsConnecting(next, goal)
+	}
+
+	// cache
+	rack.cache.Set(start, goal, sum)
+
+	return sum
+}
+```
+
+And the cache was just a struct with a `map`, with some custom getters and setters:
+
+```go
+type Cache struct {
+	// from -> to -> count
+	data map[string]map[string]int
+}
+
+func NewCache() Cache {
+	return Cache{
+		// need to initialize this
+		data: map[string]map[string]int{},
+	}
+}
+
+func (cache *Cache) Get(start, goal string) (int, bool) {
+	if a, found := cache.data[start]; found {
+		if b, found := a[goal]; found {
+			return b, true
+		}
+	}
+	return 0, false
+}
+
+func (cache *Cache) Set(start, goal string, val int) {
+	if a, found := cache.data[start]; found {
+		a[goal] = val
+	} else {
+		cache.data[start] = map[string]int{
+			goal: val,
+		}
+	}
+}
+```
+
+I tried a `sync.Mutex` on the cache (so that I could continue to abuse goroutines), but it *cost* me 100µs on average.  Also, TIL that `Option+M` creates `µ` on a Mac.
 
 ### Day 10
 
