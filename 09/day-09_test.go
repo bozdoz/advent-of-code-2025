@@ -51,7 +51,6 @@ func TestExampleOne(t *testing.T) {
 }
 
 func TestExampleTwo(t *testing.T) {
-	t.Skip("Answer should be 24, but got 50")
 	want := answers[2]
 
 	got := partTwo(data)

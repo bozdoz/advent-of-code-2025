@@ -137,11 +137,315 @@ I tried a `sync.Mutex` on the cache (so that I could continue to abuse goroutine
 
 ### Day 9
 
-**Difficulty: 0/10 ☆☆☆☆☆☆☆☆☆☆**
+**Difficulty: 8/10 ★★★★★★★★☆☆**
 
-**Time: ~ hrs**
+**Time: 8 hrs**
 
-**Run Time: ~**
+**Run Time: 30ms**
+
+Nearly a full day on this problem. And ~400 LOC. And ~5 pages in my notebook.
+
+First, I added a new type for my Day Reader:
+
+```go
+day.reader = any(ReadCSVInt).(func(string) T)
+```
+
+Then I was able to just use `[]int` as my data type, and parse with `slices.Chunk`:
+
+```go
+// first time using Chunk
+for chunk := range slices.Chunk(data, 2) {
+	redTiles[[2]int{chunk[0], chunk[1]}] = struct{}{}
+}
+```
+
+In order to do this I updated the `ScanCommas` scanner function to check for commas first, then check for newlines:
+
+```go
+if i := bytes.IndexByte(data, ','); i >= 0 {
+	// check newlines too
+	if j := bytes.IndexByte(data, '\n'); j >= 0 {
+		// if we have both comma and a newline, do the lesser
+		// first time using `min`?
+		k := min(i, j)
+		// We have a full comma-separated segment.
+		return k + 1, data[0:k], nil
+	}
+	// We have a full comma-separated segment.
+	return i + 1, data[0:i], nil
+}
+```
+
+First time using `min`, and `max` today, which were apparently added in 1.21 (after my last AOC in go).
+
+So, for **part one**, I created a slice from the map keys, using `slices.Collect`, and `maps.Keys`, I think both for the first time:
+
+```go
+func (theater *MovieTheater) LargestArea() (largest int) {
+	// iterate all points and return largest area
+	// now it's the first time using Collect
+	tiles := slices.Collect(maps.Keys(theater.redTiles))
+	for i, a := range tiles {
+		for _, b := range tiles[i+1:] {
+			area := rectArea(a, b)
+
+			// first time using max
+			largest = max(largest, area)
+		}
+	}
+
+	return
+}
+```
+
+This returned the largest area within ~100µs.
+
+**Part TWO**, I thought about doing a flood fill on all lines, and all inner cells, but worried it would be the wrong solution.  I thought I could check intersections of lines to invalidate areas, though that became challenging.  Thus ~400 LOC.
+
+First, perpendicular axis-aligned line intersections are pretty basic:
+
+Given two lines:
+
+```console
+	A
+	|
+	|  C---D
+	|
+	B
+```
+
+It intersects if `A.x` is between `C.x` and `D.x` AND if `C.y` is between `A.y` and `B.y`.  I just had to do that twice with a rect's top, bottom, left, and right sides (against *all* stored vertical and horizontal lines).
+
+The collection of those lines were rather simple: I started anywhere (because my tiles are in an unordered `map`), I iterate in 4 directions, and increase distance each loop, in order to check for nearest adjacent.
+
+Something like:
+
+```go
+var DIRS = [4][2]int{
+	{0, -1}, // up
+	{1, 0},  // right
+	{0, 1},  // down
+	{-1, 0}, // left
+}
+// ...
+
+for {
+	// moving outwards from a given tile
+	dist++
+	// iterate in each direction
+	for d, dir := range DIRS {
+		// don't check the direction you came
+		if d == ignore_dir {
+			continue
+		}
+		// move current by (dist) amount in (dir) direction
+		candidate = [2]int{cur[0] + dir[0]*dist, cur[1] + dir[1]*dist}
+
+		// check if candidate is a red tile
+		if _, found := theater.redTiles[candidate]; found {
+			if !yield(candidate, d) {
+				// exit if false (never)
+				return
+			}
+```
+
+The rest is even more painful.  After doing that, I realized it was still passing for points like `A` and `B` here:
+
+```console
+         A...o
+outside  .
+         .
+ B.......o
+ .
+ .    inside
+ o
+```
+
+Because I was only checking intersections **within** the polygon.  Now I had to figure out how to prevent checks that are **outside** the polygon.  I also realized that the way I was creating the polygon, I had no idea at any given line, which side was inside, and which was outside.  I could *guess* that I was going CCW and the left was inside, but I'd be wrong half the time, due to my (probably foolish) implementation of grabbing the first key from an unordered map as starting point.
+
+In any case, I was able to use shoelace theorem (first used in [2023 Day 10](https://github.com/bozdoz/advent-of-code-2023/blob/75966a2785074241aad99c8ab42b77f670d77de2/day-10/src/main.rs#L173)) to determine if I was going CCW or CW (negative or positive areas).
+
+I also compared each line's direction with the previous line's direction, in order to determine if the corner was convex (<=180) or concave (>=180) (still not sure which is which).  So I tracked diagonals which point inward for every corner: some have 3 diagonals, and some have 1.
+
+```console
+         A...o
+outside  .↘️
+         .↗️
+ B.......o
+ .↘️    ↙️ ↘️
+ .    inside
+ o
+```
+
+This was painful:
+
+```go
+// assume CCW, meaning left-side is inside
+// ! is there a better way to do all of this?
+switch [2]int{prev_d, d} {
+// left, then down, and so on
+case [2]int{LEFT, DOWN}:
+	diagonals[prev] = SE
+case [2]int{LEFT, UP}:
+	diagonals[prev] = SE | SW | NW
+case [2]int{DOWN, LEFT}:
+	diagonals[prev] = SW | SE | NE
+case [2]int{DOWN, RIGHT}:
+	diagonals[prev] = NE
+case [2]int{RIGHT, DOWN}:
+	diagonals[prev] = NW | NE | SE
+case [2]int{RIGHT, UP}:
+	diagonals[prev] = NW
+case [2]int{UP, RIGHT}:
+	diagonals[prev] = SW | NW | NE
+case [2]int{UP, LEFT}:
+	diagonals[prev] = SW
+	// pretty sure I don't care about straight lines
+}
+```
+
+And then it didn't work.  Actually, it passed the tests half of the time.  Meaning there was some problem with the directions.  First, I initially used `&` instead of `|` to create the diagonals.  Second, I ran into this comparison (A->B):
+
+```console
+         o...o
+         .   .
+         .   .
+ B.......o   .
+ .           .
+ .           .
+ o.......C   .
+         .   .
+				 D...A
+```
+
+Here a rectangle between A->B includes the empty space bottom-left. It doesn't cross any of the perimeter lines that I set up.  For example, `D.y` is **equal to** `A.y` (not between `A.y` and `B.y`).
+
+So I had to come up with something else: extra lines on all convex(?) corners:
+
+```console
+        ┌-   -┐
+        |o...o|
+         .   .
+┌-       .   .
+|o.......o   .
+ .           .
+ .           .
+|o.......o   .
+∟-       .   .
+				|o...o|
+				∟-   -┘
+```
+
+Now I had lines between all tiles, and lines around each outer corner, which should at least catch the edge case above.
+
+```go
+is_clockwise := shoelace_area > 0
+
+// in case of CW, we need to inverse the acceptable diagonals
+inverse_mask := NW + NE + SW + SE
+
+// iterate diagonals (again?)
+// then they're convex(?) and we should extend the lines
+// to make an extra border
+for k, v := range diagonals {
+	if is_clockwise {
+		// inverse all the diagonals (all bits on)
+		v ^= inverse_mask
+		// update
+		diagonals[k] = v
+	}
+	// TOO many switch statements
+	// we're making an extra (small) 2 lines around every convex(?) corner
+	// they're convex if they have only 1 acceptable diagonal;
+	// this switch statement checks for EXACTlY one diagonal
+	switch v {
+	case NE:
+		// draw a horizontal 2-unit length line bottom
+		// constant y+1, x-1 -> x+1
+		line = [3]int{k[1] + 1, k[0] - 1, k[0] + 1}
+		horizontal = append(horizontal, line)
+		// draw a vertical 2-unit length line on the left
+		// constant x-1, y-1 -> y+1
+		line = [3]int{k[0] - 1, k[1] - 1, k[1] + 1}
+		vertical = append(vertical, line)
+	case SE:
+		// draw top&left
+		line = [3]int{k[1] - 1, k[0] - 1, k[0] + 1}
+		horizontal = append(horizontal, line)
+
+		line = [3]int{k[0] - 1, k[1] - 1, k[1] + 1}
+		vertical = append(vertical, line)
+	case SW:
+		// draw top&right
+		line = [3]int{k[1] - 1, k[0] - 1, k[0] + 1}
+		horizontal = append(horizontal, line)
+
+		line = [3]int{k[0] + 1, k[1] - 1, k[1] + 1}
+		vertical = append(vertical, line)
+	case NW:
+		// draw bottom&right
+		line = [3]int{k[1] + 1, k[0] - 1, k[0] + 1}
+		horizontal = append(horizontal, line)
+
+		line = [3]int{k[0] + 1, k[1] - 1, k[1] + 1}
+		vertical = append(vertical, line)
+	}
+}
+```
+
+Now I did all of this, because *I didn't know how to grow the polygon outwards* to begin with: not that that would definitely be easier.
+
+Anyway, this worked.  It's under a second.  I'm happy with it.  The actual checks before the area looks like this (still long):
+
+```go
+for i, a := range tiles {
+	for _, b := range tiles[i+1:] {
+		if a[0] == b[0] || a[1] == b[1] {
+			// just outright ignore straight lines
+			continue
+		}
+
+		// check if a->b is in acceptable direction (pointed inwards)
+		dir = [2]bool{
+			b[0] > a[0], // rightward
+			b[1] > a[1], // downward
+		}
+
+		switch dir {
+		case [2]bool{true, true}:
+			// SE
+			compare_diagonal = SE
+		case [2]bool{true, false}:
+			// NE
+			compare_diagonal = NE
+		case [2]bool{false, false}:
+			// NW
+			compare_diagonal = NW
+		case [2]bool{false, true}:
+			// SW
+			compare_diagonal = SW
+		}
+
+		// TODO: could check CW or CCW here instead of inversing diagonals above
+		// OR: make sure it is never CW
+
+		if perimeter.tileAndDiagonals[a]&compare_diagonal != compare_diagonal {
+			// this area is outside the polygon
+			// fmt.Println("Outside:", a, b, perimeter.tileAndDiagonals[a], compare_diagonal)
+			continue
+		}
+
+		// then (2) check if any intersections with rect (invalid),
+		if !perimeter.intersectsRect(a, b) {
+			// before (3) getting area
+			area = rectArea(a, b)
+
+			largest = max(largest, area)
+		}
+	}
+}
+```
 
 ### Day 8
 
