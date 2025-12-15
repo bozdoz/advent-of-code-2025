@@ -1,3 +1,42 @@
+### Day 12
+
+**Difficulty: ?/10 ☆☆☆☆☆☆☆☆☆☆**
+
+**Time: 1 hrs**
+
+**Run Time: 500µs**
+
+I had no idea how to do this, and then I looked on Reddit and apparently the test data is just hypothetical, but the real data was incredibly basic:
+
+Each region either can contain all the presents no matter the shape, OR:
+
+Each region cannot contain all the presents no matter the shape.  
+
+All that matters is the region area, the present area, and the cell count for the present shape.
+
+Then check worst case:
+
+```go
+// check if more space than worst case (always works)
+	totalarea := region.height * region.width
+	worstcase := 0
+	for i, count := range region.presentCount {
+		if count > 0 {
+			// all cells (3x3)
+			worstcase += presents[i].area * count
+		}
+	}
+	if worstcase <= totalarea {
+		// we can always fit
+		return true
+	}
+```
+
+And that's pretty much it.  The rest can all return `false`.
+
+Tried to make an iterator for a day reader, but I couldn't figure out how to do it.
+Maybe I need to open the file **within** the iterator.
+
 ### Day 11
 
 **Difficulty: 6/10 ★★★★★★☆☆☆☆**
@@ -316,7 +355,7 @@ And then it didn't work.  Actually, it passed the tests half of the time.  Meani
  .           .
  o.......C   .
          .   .
-				 D...A
+         D...A
 ```
 
 Here a rectangle between A->B includes the empty space bottom-left. It doesn't cross any of the perimeter lines that I set up.  For example, `D.y` is **equal to** `A.y` (not between `A.y` and `B.y`).
@@ -334,7 +373,7 @@ So I had to come up with something else: extra lines on all convex(?) corners:
 |o.......o   .
 ∟-       .   .
 				|o...o|
-				∟-   -┘
+        ∟-   -┘
 ```
 
 Now I had lines between all tiles, and lines around each outer corner, which should at least catch the edge case above.

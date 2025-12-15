@@ -3,8 +3,10 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"iter"
 	"log"
 	"os"
+	"strings"
 )
 
 func ReadAsLines(filename string) (out []string) {
@@ -90,4 +92,41 @@ func ReadCSVInt(filename string) (out []int) {
 	}
 
 	return
+}
+
+func ReadSpaceSeparatedSections(filename string) []string {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return strings.Split(string(data), "\n\n")
+}
+
+// no idea how to do this
+func ReadLinesSeq(filename string) func() iter.Seq[string] {
+	return func() iter.Seq[string] {
+		return _readLinesSeq(filename)
+	}
+}
+
+// hard to return an iterator here
+func _readLinesSeq(filename string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// ! am I closing too soon?
+		// can I read a file inside an iterator?
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			if !yield(scanner.Text()) {
+				return
+			}
+		}
+	}
 }
