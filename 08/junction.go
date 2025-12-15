@@ -5,6 +5,8 @@ import (
 	"iter"
 	"math"
 	"slices"
+
+	"github.com/bozdoz/advent-of-code-2025/utils"
 )
 
 type Point struct {
@@ -89,16 +91,6 @@ func (junction *Junction) ConnectNodes(count int) {
 	}
 }
 
-// gets first (FIFO)
-func shift[T any](s *[]T) T {
-	// ! doesn't care about length 0
-	val := (*s)[0]
-	// remove from slice
-	*s = (*s)[1:]
-
-	return val
-}
-
 // maybe not the best time for me to be throwing myself
 // into another sequence
 func (junction *Junction) eachConnected(start int, visited *map[int]struct{}) iter.Seq[int] {
@@ -106,7 +98,7 @@ func (junction *Junction) eachConnected(start int, visited *map[int]struct{}) it
 
 	return func(yield func(int) bool) {
 		for len(queue) > 0 {
-			connectedId := shift(&queue)
+			connectedId := utils.MustShift(&queue)
 
 			if _, found := (*visited)[connectedId]; !found {
 				// only unseen ids

@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/bozdoz/advent-of-code-2025/utils"
+)
 
 type Grid struct {
 	start         int // index
@@ -32,31 +36,6 @@ func NewGrid(data []string) *Grid {
 	}
 }
 
-// gets last (LIFO)
-func pop[T any](s *[]T) *T {
-	if len(*s) == 0 {
-		return nil
-	}
-
-	end := len(*s) - 1
-	val := (*s)[end]
-	*s = (*s)[:end]
-
-	return &val
-}
-
-// gets first (FIFO)
-func shift[T any](s *[]T) *T {
-	if len(*s) == 0 {
-		return nil
-	}
-
-	val := (*s)[0]
-	*s = (*s)[1:]
-
-	return &val
-}
-
 type State struct {
 	position   int // index of a splitter
 	prev       int // index of previous
@@ -83,7 +62,7 @@ func (grid *Grid) Travel() map[int]*Splitter {
 
 	for len(states) > 0 {
 		// breadth-first; still not sure if good idea
-		state := shift(&states)
+		state := utils.Shift(&states)
 		reachesEnd := state.reachesEnd
 		// skip seen
 		if splitter, ok := splitters[state.position]; ok {
