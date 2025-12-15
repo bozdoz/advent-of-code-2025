@@ -103,23 +103,16 @@ func ReadSpaceSeparatedSections(filename string) []string {
 	return strings.Split(string(data), "\n\n")
 }
 
-// no idea how to do this
-func ReadLinesSeq(filename string) func() iter.Seq[string] {
-	return func() iter.Seq[string] {
-		return _readLinesSeq(filename)
-	}
-}
-
-// hard to return an iterator here
-func _readLinesSeq(filename string) iter.Seq[string] {
+// this works fine, but didn't use it anywhere
+func ReadLinesIter(filename string) iter.Seq[string] {
 	return func(yield func(string) bool) {
+		// need to open the file within the iterator;
+		// otherwise defer was closing too soon
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// ! am I closing too soon?
-		// can I read a file inside an iterator?
 		defer file.Close()
 
 		scanner := bufio.NewScanner(file)
