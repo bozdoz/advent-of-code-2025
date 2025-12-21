@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"iter"
+	"log"
 	"math"
 	"math/bits"
 	"slices"
@@ -204,15 +205,6 @@ type State struct {
 	magnitude int
 	presses   int
 	prev      []DebugPrev
-}
-
-func stamp() func() int {
-	i := 100
-	step := 5
-	return func() int {
-		i += step
-		return i
-	}
 }
 
 // create new diagram from joltage
@@ -537,8 +529,186 @@ func (machine *Machine) RecursiveJoltagePresses(state NextState) (fewest int) {
 	return
 }
 
+//
+// GAUSSIAN ELIMINATION
+//
+
+// by: icub3d
+// https://www.youtube.com/watch?v=xibCHVRF6oI
+
+type Matrix struct {
+	RREF   [][]float64
+	Pivots []int
+	Free   []int
+}
+
+// from CHATGPT
+func RREF(A [][]float64) Matrix {
+	m := len(A)    // height
+	n := len(A[0]) // width
+
+	// Copy matrix
+	M := make([][]float64, m)
+	for i := range A {
+		M[i] = append([]float64(nil), A[i]...)
+	}
+
+	row := 0
+	pivots := []int{}
+
+	for col := 0; col < n-1 && row < m; col++ {
+		// Find pivot row
+		pivot := row
+		maxVal := math.Abs(M[row][col])
+		for i := row + 1; i < m; i++ {
+			if math.Abs(M[i][col]) > maxVal {
+				maxVal = math.Abs(M[i][col])
+				pivot = i
+			}
+		}
+
+		// if the best value is 0 it's a free variable
+		if math.Abs(M[pivot][col]) < 1e-12 {
+			continue // No pivot in this column
+		}
+
+		// Swap pivot row into place
+		M[row], M[pivot] = M[pivot], M[row]
+
+		// Normalize pivot row
+		p := M[row][col]
+		for j := col; j < n; j++ {
+			M[row][j] /= p
+		}
+
+		// Eliminate above and below
+		for i := range m {
+			if i == row {
+				continue
+			}
+			f := M[i][col]
+			for j := col; j < n; j++ {
+				M[i][j] -= f * M[row][j]
+			}
+		}
+
+		pivots = append(pivots, col)
+		row++
+	}
+
+	// Determine free columns
+	free := []int{}
+	varMap := make(map[int]bool)
+	for _, p := range pivots {
+		varMap[p] = true
+	}
+	for c := 0; c < n-1; c++ {
+		if !varMap[c] {
+			free = append(free, c)
+		}
+	}
+
+	return Matrix{
+		RREF:   M,
+		Pivots: pivots,
+		Free:   free,
+	}
+}
+
+func (machine *Machine) ToMatrix() [][]float64 {
+	out := make([][]float64, len(machine.joltage))
+
+	row_len := len(machine.plain_buttons) + 1
+
+	for i := range out {
+		out[i] = make([]float64, row_len)
+		out[i][row_len-1] = float64(machine.joltage[i])
+	}
+
+	for col, buttons := range machine.plain_buttons {
+		for _, row := range buttons {
+			out[row][col] = 1
+		}
+	}
+
+	return out
+}
+
+// do we need this?
+const EPSILON float64 = 1e-9
+
+func (matrix *Matrix) is_valid(values *[]int) (total int, valid bool) {
+	cols := len(matrix.RREF[0])
+	for row := range len(matrix.Pivots) {
+		joltage := matrix.RREF[row][cols-1]
+		// fmt.Println("Finding joltage", joltage)
+		for i, col := range matrix.Free {
+			joltage -= matrix.RREF[row][col] * float64((*values)[i])
+		}
+
+		if joltage < -EPSILON {
+			// checking if it's negative
+			return 0, false
+		}
+		rounded := math.Round(joltage)
+
+		if math.Abs(joltage-rounded) > EPSILON {
+			// checking if it's a float
+			return 0, false
+		}
+
+		total += int(rounded)
+	}
+
+	free_total := utils.Sum(*values)
+
+	return total + free_total, true
+}
+
+func dfs(matrix Matrix, index int, values *[]int, min *int, max int) {
+	if index == len(matrix.Free) {
+		if total, valid := matrix.is_valid(values); valid {
+			if total < *min {
+				*min = total
+			}
+		}
+		return
+	}
+
+	sum := utils.Sum((*values)[:index])
+
+	for val := range max {
+		if sum+val >= *min {
+			break
+		}
+		(*values)[index] = val
+		dfs(matrix, index+1, values, min, max)
+	}
+}
+
 // TODO:
 // try guassian elimination and linear equations
 func (machine *Machine) GaussianElimination() (fewest int) {
-	return
+	A := machine.ToMatrix()
+
+	res := RREF(A)
+
+	log.Println("")
+	for _, r := range res.RREF {
+		log.Println(r)
+	}
+
+	log.Println("\nPivot columns:", res.Pivots)
+	log.Print("Free columns:", res.Free, "\n\n")
+
+	// GET MAX FROM JOLTAGES
+	// ? first time using slices.Max
+	max := slices.Max(machine.joltage)
+	min := math.MaxInt
+	values := make([]int, len(res.Free))
+
+	// DFS
+	dfs(res, 0, &values, &min, max)
+
+	return min
 }

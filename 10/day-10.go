@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"iter"
 	"log"
@@ -26,14 +25,9 @@ func partOne(data d) (ans any) {
 func partTwo(data d) (ans any) {
 	manual := NewManual(data)
 
-	sum := 0
-	for i, machine := range manual.machines {
-		fewest := machine.GetFewestRecursive()
-		fmt.Println("fewest", i+1, fewest)
-		sum += fewest
-	}
-
-	return sum
+	return utils.SumFunc(manual.machines, func(machine Machine) int {
+		return machine.GaussianElimination()
+	})
 }
 
 //
