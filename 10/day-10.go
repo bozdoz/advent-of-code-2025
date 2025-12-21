@@ -1,13 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"iter"
 	"log"
 
 	"github.com/bozdoz/advent-of-code-2025/utils"
 )
 
-type d = []string
+// I don't know; just trying it out
+type d = iter.Seq[string]
 
 func partOne(data d) (ans any) {
 	manual := NewManual(data)
@@ -21,7 +24,16 @@ func partOne(data d) (ans any) {
 }
 
 func partTwo(data d) (ans any) {
-	return 0
+	manual := NewManual(data)
+
+	sum := 0
+	for i, machine := range manual.machines {
+		fewest := machine.GetFewestRecursive()
+		fmt.Println("fewest", i+1, fewest)
+		sum += fewest
+	}
+
+	return sum
 }
 
 //

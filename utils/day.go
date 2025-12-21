@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"iter"
 	"time"
 )
 
@@ -33,6 +34,8 @@ func NewDay[T any]() *day[T] {
 		day.reader = any(ReadAsLines).(func(string) T)
 	case []int:
 		day.reader = any(ReadCSVInt).(func(string) T)
+	case iter.Seq[string]:
+		day.reader = any(ReadLinesIter).(func(string) T)
 	default:
 		panic(fmt.Sprintf("need to implement a reader for type: %T", day.__type__))
 	}

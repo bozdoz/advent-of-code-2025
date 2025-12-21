@@ -14,7 +14,7 @@ func init() {
 // fill in the answers for each part (as they come)
 var answers = map[int]int{
 	1: 7,
-	2: 0,
+	2: 33,
 }
 
 var data = day.Read("./example.txt")
