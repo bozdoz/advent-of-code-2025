@@ -14,12 +14,9 @@ type d = iter.Seq[string]
 func partOne(data d) (ans any) {
 	manual := NewManual(data)
 
-	sum := 0
-	for _, machine := range manual.machines {
-		sum += machine.FewestButtonPresses()
-	}
-
-	return sum
+	return utils.SumFunc(manual.machines, func(machine Machine) int {
+		return machine.FewestToDiagram()
+	})
 }
 
 func partTwo(data d) (ans any) {

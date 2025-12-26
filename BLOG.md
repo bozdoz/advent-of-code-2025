@@ -168,11 +168,123 @@ I tried a `sync.Mutex` on the cache (so that I could continue to abuse goroutine
 
 ### Day 10
 
-**Difficulty: 0/10 ☆☆☆☆☆☆☆☆☆☆**
+**Difficulty: 10/10 ★★★★★★★★★★**
 
-**Time: ~ hrs**
+**Time: 20+ hrs**
 
-**Run Time: ~**
+**Run Time: ~235ms**
+
+Almost 700 LOC, and multiple attempts.
+
+Part one was basically summarized in the `allPossibleButtonPresses` function, which I eventually turned into an iterator, and tried to use for Part 2.  The function is meant only to return all button combinations that would produce some diagram: for part 1 that's the light diagram.
+
+My machine (for part 1 anyway) uses a lot of binary:
+
+```go
+
+type Machine struct {
+	light_diagram int         // (reversed) binary
+	button_wiring map[int]int // index binary -> button binary
+	// ...
+}
+
+// for light diagram:
+// do this in reverse,
+// so the button ints line up properly
+for j := len(inside) - 1; j >= 0; j-- {
+	machine.light_diagram <<= 1
+	if inside[j] == '#' {
+		machine.light_diagram += 1
+	}
+}
+
+// for buttons:
+button := 0
+for val := range strings.SplitSeq(inside, ",") {
+	// 3 is not 3, but instead the 3rd bit
+	num := utils.ParseInt(val)
+	button |= 1 << num
+}
+// i will start at 2 here, because buttons come second
+index_binary := 1 << (index - 2)
+machine.button_wiring[index_binary] = button
+```
+
+So now I've got button wiring that translates:
+
+`(3) (1,3) (2)`
+
+to (binary):
+
+`1: 1000, 10: 1010, 100: 0100`
+
+OR (decimal):
+
+`1: 8, 2: 10, 4: 4`
+
+And the diagrams are translated from:
+
+`[...#.], [.###.#]` 
+
+to (reversed):
+
+`8, 46`
+
+Anyway, I thought this was smart, given in Part 1 I leveraged the binary to toggle buttons (via `^` XOR), check if keys were already pressed (via `&` AND), and decide whether a button is worth pressing (via `|` OR).
+
+```go
+item := utils.MustShift(&queue)
+
+current, pressed := item[0], item[1]
+
+// get next buttons to press
+for k, v := range machine.button_wiring {
+	if k&pressed == k {
+		// already pressed
+		continue
+	}
+	// only press if it will impact either current or the diagram
+	// seems to save about ~10ms
+	compare := current | diagram
+
+	if v&compare != 0 {
+		// queue next state
+		// toggles lights
+		next := current ^ v
+		next_pressed := pressed | k
+```
+
+This is all fine.  Part 2 I had no idea how to do, but I saw that a bunch of people on Reddit used third party libraries.  I saw someone suggest generating a binary for odd digits in Joltage, pressing those buttons, then dividing joltage by 2, and so on, until joltage is 0's; I could get that to work on the test data, but I couldn't get it to work on my real data.  I also saw people talking about Gaussian Elimination.  
+
+I read [the wiki page on it](https://en.wikipedia.org/wiki/Gaussian_elimination), and [watched a video solution using it](https://www.youtube.com/watch?v=xibCHVRF6oI), and eventually thought I could try it.  I [understood most of the rust code, so was able to use some of that too](https://gist.github.com/icub3d/16eea2a8b4a94d193a148fef908779a9).
+
+First I needed to figure out how to get a reduced row echelon form matrix, which I gleaned from wikipedia, and then asked ChatGPT to convert from pseudocode. I understand some of it, but didn't think too hard about it.  I understand that there are properties of a matrix that we can exploit to help reduce the scope of this problem.  I would have to practice a bit more on matrices to fully understand how to simplify this code, or why it works.
+
+Then I created a small script to convert the joltages to matrices. The rest is mostly lifted from icub3d's implementation:
+
+```go
+func (machine *Machine) GaussianElimination() (fewest int) {
+	matrix := machine.ToMatrix()
+
+	reduced := RREF(matrix)
+
+	// never going to be higher than the highest joltage
+	max := slices.Max(machine.joltage)
+	min := math.MaxInt
+	values := make([]int, len(reduced.Free))
+
+	// DFS
+	dfs(reduced, 0, values, &min, max)
+
+	return min
+}
+```
+
+This is nice and brief.  First time using `slices.Max` to return some max value from a slice.  I think this is the first time I've passed a reference to an `int` so that some recursive function can just update it, but it's very clever: easier than keeping track of return values. I think in previous years I passed a `channel` and waited for values, though I'm not sure how that would help me here.
+
+So yeah, learned a lot about matrices: maybe some better practices for dfs recursive functions.
+
+
 
 ### Day 9
 

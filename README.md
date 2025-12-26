@@ -15,3 +15,5 @@ New: `./createDay.sh 02`
 ### Help
 
 - [Reddit](https://reddit.com/r/adventofcode)
+- [ChatGPT](https://chatgpt.com/)
+- [icub3d](https://www.youtube.com/watch?v=xibCHVRF6oI)

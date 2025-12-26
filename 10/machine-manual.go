@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"iter"
 	"log"
 	"math"
@@ -13,11 +12,10 @@ import (
 )
 
 type Machine struct {
-	light_diagram int           // (reversed) binary
-	button_wiring map[int]int   // index binary -> button binary
-	plain_buttons [][]int       // joltage_indexes
-	joltage       []int         // part 2 button press counts
-	cache         map[int][]int // another one
+	light_diagram int         // (reversed) binary
+	button_wiring map[int]int // index binary -> button binary
+	plain_buttons [][]int     // button values
+	joltage       []int       // part 2 button press counts
 }
 
 type Manual struct {
@@ -69,56 +67,23 @@ func NewManual(data d) *Manual {
 			}
 		}
 
-		machine.cache = make(map[int][]int)
-
 		machines = append(machines, machine)
 	}
 
 	return &Manual{machines}
 }
 
-func (machine *Machine) FewestButtonPresses() (fewest int) {
-	// after analyzing the input:
-	// I can say *none* of them will have a diagram of 0
-
-	// state is [2]int = current & pressed
-	queue := [][2]int{{0, 0}}
-
-	for len(queue) > 0 {
-		item := utils.MustShift(&queue)
-
-		current, pressed := item[0], item[1]
-
-		// get next buttons to press
-		for k, v := range machine.button_wiring {
-			if k&pressed == k {
-				// already pressed
-				continue
-			}
-			// only press if it will impact either current or the diagram
-			compare := current | machine.light_diagram
-
-			if v&compare != 0 {
-				// queue next state
-				// toggles lights
-				next := current ^ v
-				next_pressed := pressed | k
-
-				if next == machine.light_diagram {
-					// wow, we're done
-					return bits.OnesCount(uint(next_pressed))
-				}
-
-				queue = append(queue, [2]int{next, next_pressed})
-			}
-		}
+func (machine *Machine) FewestToDiagram() (fewest int) {
+	for first := range machine.allPossibleButtonPresses(machine.light_diagram) {
+		// the bit count is how many buttons are pressed
+		return bits.OnesCount(uint(first))
 	}
 
 	return
 }
 
-func (machine *Machine) DebugButtonsInt(prefix string, buttons int) {
-	// initial_buttons := buttons
+// my bitwise operations getting confusing
+func (machine *Machine) debugButtonsInt(prefix string, buttons int) {
 	out := [][]int{}
 	for i := 0; buttons > 0; i++ {
 		if buttons&1 == 1 {
@@ -127,35 +92,22 @@ func (machine *Machine) DebugButtonsInt(prefix string, buttons int) {
 		}
 		buttons >>= 1
 	}
-	// log.Println(prefix, initial_buttons, out)
+	log.Println(prefix, out)
 }
 
-// TODO: terrible name
 // this gets all possible button presses that produces a given diagram:
 // [##.#]
-func (machine *Machine) AllFewest(diagram int) iter.Seq[int] {
-	if cache, found := machine.cache[diagram]; found {
-		// return cached sequence
-		return slices.Values(cache)
-	}
-
-	machine.cache[diagram] = []int{}
-
-	// I don't know what I'm doing
-	set_cache := func(buttons int) {
-		machine.cache[diagram] = append(machine.cache[diagram], buttons)
-	}
-
+func (machine *Machine) allPossibleButtonPresses(diagram int) iter.Seq[int] {
 	return func(yield func(int) bool) {
 		// after analyzing the input:
 		// I can say *none* of them will have a diagram of 0
 
 		// state is [2]int = current & pressed
 		queue := [][2]int{{0, 0}}
-		sent := map[int]struct{}{}
+		sent_already := map[int]struct{}{}
 
 		for len(queue) > 0 {
-			item := utils.MustPop(&queue)
+			item := utils.MustShift(&queue)
 
 			current, pressed := item[0], item[1]
 
@@ -166,6 +118,7 @@ func (machine *Machine) AllFewest(diagram int) iter.Seq[int] {
 					continue
 				}
 				// only press if it will impact either current or the diagram
+				// seems to save about ~10ms
 				compare := current | diagram
 
 				if v&compare != 0 {
@@ -174,14 +127,13 @@ func (machine *Machine) AllFewest(diagram int) iter.Seq[int] {
 					next := current ^ v
 					next_pressed := pressed | k
 
-					if _, found := sent[next_pressed]; found {
+					if _, found := sent_already[next_pressed]; found {
 						continue
 					}
 
 					if next == diagram {
 						// wow, we're done
-						sent[next_pressed] = struct{}{}
-						set_cache(next_pressed)
+						sent_already[next_pressed] = struct{}{}
 						if !yield(next_pressed) {
 							return
 						}
@@ -194,35 +146,28 @@ func (machine *Machine) AllFewest(diagram int) iter.Seq[int] {
 	}
 }
 
-type DebugPrev struct {
-	last    []int
-	buttons int
-}
-
-type State struct {
+type UnusedState struct {
 	cur []int
 	// when we divide by 2, we increase the magnitude of each press
 	magnitude int
 	presses   int
-	prev      []DebugPrev
 }
 
-// create new diagram from joltage
-// figure out which buttons create that diagram
+// ! This worked on example data, but not on real data
+// create new diagram from odd joltage values
+// figure out which buttons create a diagram that toggles only odd joltage
 // divide joltage by at least half (they'll all be even)
-// determine which buttons to press next
-func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
+// repeat
+func (machine *Machine) fewestButtonPressJoltage() (fewest int) {
 
 	fewest = math.MaxInt
 
-	queue := []State{
+	queue := []UnusedState{
 		{
 			cur:       machine.joltage,
 			magnitude: 0,
 			presses:   0,
-			prev: []DebugPrev{
-				{last: machine.joltage, buttons: -1},
-			}},
+		},
 	}
 
 	for len(queue) > 0 {
@@ -271,11 +216,6 @@ func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
 			// we've filled all the joltage
 			if state.presses < fewest {
 				fewest = state.presses
-				// fmt.Println("Fewest State", state.presses)
-				// fmt.Println("Prev:", state.prev)
-				for _, prev := range state.prev[1:] {
-					machine.DebugButtonsInt("--", prev.buttons)
-				}
 			}
 			continue
 		}
@@ -304,15 +244,6 @@ func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
 			}
 			state.magnitude++
 
-			prev_states := make([]DebugPrev, len(state.prev))
-
-			copy(prev_states, state.prev)
-
-			state.prev = append(prev_states, DebugPrev{
-				next,
-				-2,
-			})
-
 			state.cur = next
 
 			queue = append(queue, state)
@@ -327,16 +258,12 @@ func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
 		// for each of all possible, press the buttons
 		// and save the state to some BFS
 	outer:
-		for buttons := range machine.AllFewest(diagram) {
+		for buttons := range machine.allPossibleButtonPresses(diagram) {
 
 			// press the buttons, and adjust joltage
 			next := make([]int, len(cur))
 			copy(next, cur)
 			presses := 0
-
-			// machine.DebugButtonsInt("buttons", buttons)
-
-			prev_buttons := buttons
 
 			for i := 0; buttons > 0; i++ {
 				if buttons&1 == 1 {
@@ -355,22 +282,10 @@ func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
 				buttons >>= 1
 			}
 
-			// log.Println("presses", presses, "stamped", stamped)
-
-			prev_states := make([]DebugPrev, len(state.prev))
-
-			copy(prev_states, state.prev)
-
-			prev_states = append(prev_states, DebugPrev{
-				next,
-				prev_buttons,
-			})
-
-			queue = append(queue, State{
+			queue = append(queue, UnusedState{
 				next,
 				state.magnitude,
 				state.presses + presses,
-				prev_states,
 			})
 		}
 	}
@@ -378,20 +293,17 @@ func (machine *Machine) FewestButtonPressJoltage() (fewest int) {
 	return
 }
 
-// should be a good enough hash?
-func Hashed(in []int) (out any) {
-	return fmt.Sprintf("%v", in)
-}
-
-func (machine *Machine) GetFewestRecursive() (fewest int) {
-	return machine.RecursiveJoltagePresses(NextState{
+// tried to recursively do the divide by 2 thing above, and cache as much
+// as possible, but it also didn't work on real data
+func (machine *Machine) getFewestRecursive() (fewest int) {
+	return machine.recursiveJoltagePresses(UnusedNextState{
 		joltage:   machine.joltage,
 		presses:   0,
 		magnitude: 0,
 	})
 }
 
-type NextState struct {
+type UnusedNextState struct {
 	presses int
 	joltage []int
 	// magnitude indicates that the path has been divided by 2,
@@ -399,7 +311,7 @@ type NextState struct {
 	magnitude int
 }
 
-func (machine *Machine) GetNextButtonPresses(state NextState) (states []NextState) {
+func (machine *Machine) getNextButtonPresses(state UnusedNextState) (states []UnusedNextState) {
 	// next possible:
 	// 1. same number (other than 0's)
 	// 2. all even numbers (increase magnitude)
@@ -452,7 +364,7 @@ func (machine *Machine) GetNextButtonPresses(state NextState) (states []NextStat
 			// now I'm just intentionally being obtuse
 			next[i] >>= 1
 		}
-		return []NextState{
+		return []UnusedNextState{
 			{presses: 0, joltage: next, magnitude: state.magnitude + 1},
 		}
 	} else {
@@ -461,7 +373,7 @@ func (machine *Machine) GetNextButtonPresses(state NextState) (states []NextStat
 	}
 
 outer:
-	for buttons := range machine.AllFewest(diagram) {
+	for buttons := range machine.allPossibleButtonPresses(diagram) {
 		next := make([]int, len(state.joltage))
 		copy(next, state.joltage)
 		presses := 0
@@ -483,7 +395,7 @@ outer:
 			buttons >>= 1
 		}
 
-		states = append(states, NextState{
+		states = append(states, UnusedNextState{
 			joltage:   next,
 			presses:   presses,
 			magnitude: state.magnitude,
@@ -495,7 +407,7 @@ outer:
 
 const INVALID = -1
 
-func (machine *Machine) RecursiveJoltagePresses(state NextState) (fewest int) {
+func (machine *Machine) recursiveJoltagePresses(state UnusedNextState) (fewest int) {
 	all_zero := true
 	for num := range slices.Values(state.joltage) {
 		if num != 0 {
@@ -509,9 +421,9 @@ func (machine *Machine) RecursiveJoltagePresses(state NextState) (fewest int) {
 
 	// get next presses and positions from possible buttons
 	fewest = math.MaxInt
-	for _, next := range machine.GetNextButtonPresses(state) {
+	for _, next := range machine.getNextButtonPresses(state) {
 		// then recurse to find fewest presses
-		next_presses := machine.RecursiveJoltagePresses(next)
+		next_presses := machine.recursiveJoltagePresses(next)
 
 		if next_presses == INVALID {
 			continue
@@ -533,13 +445,18 @@ func (machine *Machine) RecursiveJoltagePresses(state NextState) (fewest int) {
 // GAUSSIAN ELIMINATION
 //
 
-// by: icub3d
+// learned from watching: icub3d
 // https://www.youtube.com/watch?v=xibCHVRF6oI
 
+// and reading:
+// https://en.wikipedia.org/wiki/Gaussian_elimination
+
+const EPSILON float64 = 1e-9
+
 type Matrix struct {
-	RREF   [][]float64
-	Pivots []int
-	Free   []int
+	RREF   [][]float64 // reduced row echelon form
+	Pivots []int       // values that are dependent on unknowns in "Free"
+	Free   []int       // values that are independent of other variables
 }
 
 // from CHATGPT
@@ -568,7 +485,7 @@ func RREF(A [][]float64) Matrix {
 		}
 
 		// if the best value is 0 it's a free variable
-		if math.Abs(M[pivot][col]) < 1e-12 {
+		if math.Abs(M[pivot][col]) < EPSILON {
 			continue // No pivot in this column
 		}
 
@@ -615,6 +532,15 @@ func RREF(A [][]float64) Matrix {
 	}
 }
 
+// converts buttons and joltage to a matrix:
+// Example:
+// (0,2,3,4) (2,3) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
+//
+// [1 0 1 1 0 7]
+// [0 0 0 1 1 5]
+// [1 1 0 1 1 12]
+// [1 1 0 0 1 7]
+// [1 0 1 0 1 2]
 func (machine *Machine) ToMatrix() [][]float64 {
 	out := make([][]float64, len(machine.joltage))
 
@@ -634,18 +560,19 @@ func (machine *Machine) ToMatrix() [][]float64 {
 	return out
 }
 
-// do we need this?
-const EPSILON float64 = 1e-9
-
-func (matrix *Matrix) is_valid(values *[]int) (total int, valid bool) {
+func (matrix *Matrix) is_valid(values []int) (total int, valid bool) {
 	cols := len(matrix.RREF[0])
 	for row := range len(matrix.Pivots) {
+		// the last column is the goal: joltages
 		joltage := matrix.RREF[row][cols-1]
-		// fmt.Println("Finding joltage", joltage)
+
+		// iterate free/independent columns to determine the pivot/dependent variables
 		for i, col := range matrix.Free {
-			joltage -= matrix.RREF[row][col] * float64((*values)[i])
+			joltage -= matrix.RREF[row][col] * float64(values[i])
 		}
 
+		// these are all floats, and may not be exact, so
+		// we need to compare with some small float instead of `0`
 		if joltage < -EPSILON {
 			// checking if it's negative
 			return 0, false
@@ -660,12 +587,17 @@ func (matrix *Matrix) is_valid(values *[]int) (total int, valid bool) {
 		total += int(rounded)
 	}
 
-	free_total := utils.Sum(*values)
+	// made a utility script for summing an int slice
+	free_total := utils.Sum(values)
 
 	return total + free_total, true
 }
 
-func dfs(matrix Matrix, index int, values *[]int, min *int, max int) {
+// very clever dfs lifted almost completely from icub3d
+// using a pointer for min
+func dfs(matrix Matrix, index int, values []int, min *int, max int) {
+	// index == len means we've populated all of `values` with
+	// arbitrary incremented values until we get a valid equation
 	if index == len(matrix.Free) {
 		if total, valid := matrix.is_valid(values); valid {
 			if total < *min {
@@ -675,40 +607,43 @@ func dfs(matrix Matrix, index int, values *[]int, min *int, max int) {
 		return
 	}
 
-	sum := utils.Sum((*values)[:index])
+	// this saves 500ms
+	// checks if the sum of the presses (so far)
+	// already exceed the min
+	sum := utils.Sum(values[:index])
 
 	for val := range max {
 		if sum+val >= *min {
 			break
 		}
-		(*values)[index] = val
+		values[index] = val
 		dfs(matrix, index+1, values, min, max)
 	}
 }
 
-// TODO:
-// try guassian elimination and linear equations
+// try gaussian elimination and linear equations
 func (machine *Machine) GaussianElimination() (fewest int) {
-	A := machine.ToMatrix()
+	matrix := machine.ToMatrix()
 
-	res := RREF(A)
+	reduced := RREF(matrix)
 
 	log.Println("")
-	for _, r := range res.RREF {
+	for _, r := range reduced.RREF {
 		log.Println(r)
 	}
 
-	log.Println("\nPivot columns:", res.Pivots)
-	log.Print("Free columns:", res.Free, "\n\n")
+	log.Println("\nPivot columns:", reduced.Pivots)
+	log.Print("Free columns:", reduced.Free, "\n\n")
 
 	// GET MAX FROM JOLTAGES
 	// ? first time using slices.Max
+	// never going to be higher than the highest joltage
 	max := slices.Max(machine.joltage)
 	min := math.MaxInt
-	values := make([]int, len(res.Free))
+	values := make([]int, len(reduced.Free))
 
 	// DFS
-	dfs(res, 0, &values, &min, max)
+	dfs(reduced, 0, values, &min, max)
 
 	return min
 }
